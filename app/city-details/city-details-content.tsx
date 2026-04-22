@@ -70,7 +70,7 @@ function StatCard({
   );
 }
 
-export default function CityDetailsPage() {
+export default function CityDetailsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -284,17 +284,13 @@ export default function CityDetailsPage() {
             </section>
 
             <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_8px_30px_rgba(148,163,184,0.12)] md:p-8">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    Onde faz mais sentido ficar
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Estas zonas são pensadas para o teu perfil de viagem e ajudam
-                    a escolher uma base mais adequada.
-                  </p>
-                </div>
-              </div>
+              <h2 className="text-xl font-semibold text-slate-900">
+                Onde faz mais sentido ficar
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Estas zonas são pensadas para o teu perfil de viagem e ajudam a
+                escolher uma base mais adequada.
+              </p>
 
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {details.regioesHospedagem.map((area, index) => (

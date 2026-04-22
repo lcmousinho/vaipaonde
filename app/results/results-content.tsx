@@ -20,7 +20,7 @@ type CitySuggestion = {
   melhorPara: string;
 };
 
-export default function ResultsPage() {
+export default function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -48,12 +48,7 @@ export default function ResultsPage() {
 
   const [countries, setCountries] = useState<CountrySuggestion[]>([]);
   const [cities, setCities] = useState<CitySuggestion[]>([]);
-
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [selectedCityData, setSelectedCityData] = useState<CitySuggestion | null>(
-    null
-  );
 
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
@@ -73,8 +68,6 @@ export default function ResultsPage() {
         setCountries([]);
         setCities([]);
         setSelectedCountry(null);
-        setSelectedCity(null);
-        setSelectedCityData(null);
 
         const res = await fetch("/api/suggest-countries", {
           method: "POST",
@@ -108,8 +101,6 @@ export default function ResultsPage() {
       setLoadingCities(true);
       setError("");
       setSelectedCountry(pais);
-      setSelectedCity(null);
-      setSelectedCityData(null);
       setCities([]);
 
       const res = await fetch("/api/suggest-cities", {
@@ -137,13 +128,8 @@ export default function ResultsPage() {
     }
   };
 
-  const handleSelectCity = (city: CitySuggestion) => {
-    setSelectedCity(city.cidade);
-    setSelectedCityData(city);
-  };
-
-  const handleGenerateFinalTrip = () => {
-    if (!searchForm || !selectedCountry || !selectedCityData) return;
+  const handleOpenCityDetails = (city: CitySuggestion) => {
+    if (!searchForm || !selectedCountry) return;
 
     const params = new URLSearchParams({
       origem: searchForm.origem,
@@ -153,13 +139,13 @@ export default function ResultsPage() {
       mes: searchForm.mes,
       perfil: searchForm.perfil,
       pais: selectedCountry,
-      cidade: selectedCityData.cidade,
-      resumoCidade: selectedCityData.resumo,
-      melhorPara: selectedCityData.melhorPara,
-      custoEstimadoCidade: String(selectedCityData.custoEstimado),
+      cidade: city.cidade,
+      resumoCidade: city.resumo,
+      melhorPara: city.melhorPara,
+      custoEstimadoCidade: String(city.custoEstimado),
     });
 
-    router.push(`/final-trip?${params.toString()}`);
+    router.push(`/city-details?${params.toString()}`);
   };
 
   return (
@@ -248,7 +234,7 @@ export default function ResultsPage() {
                   </h2>
                   <p className="mt-1 text-sm text-slate-600">
                     {selectedCountry
-                      ? `Agora escolhe uma cidade em ${selectedCountry}.`
+                      ? `Escolhe uma cidade em ${selectedCountry} para abrir a página de detalhe.`
                       : "Escolhe um país para veres as cidades aqui."}
                   </p>
                 </div>
@@ -278,46 +264,15 @@ export default function ResultsPage() {
                 )}
 
                 {!loadingCities && cities.length > 0 && (
-                  <>
-                    <div className="grid gap-5">
-                      {cities.map((city, index) => (
-                        <CityCard
-                          key={`${city.cidade}-${index}`}
-                          city={city}
-                          selected={selectedCity === city.cidade}
-                          onClick={() => handleSelectCity(city)}
-                        />
-                      ))}
-                    </div>
-
-                    {selectedCityData && (
-                      <div className="mt-6 rounded-[26px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_8px_30px_rgba(148,163,184,0.10)]">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-sm text-slate-600">
-                              Cidade escolhida
-                            </p>
-                            <h3 className="mt-1 text-xl font-semibold text-slate-900">
-                              {selectedCityData.cidade}
-                            </h3>
-                            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                              Vamos agora transformar esta escolha numa viagem
-                              final mais detalhada, com zonas onde ficar e um
-                              roteiro por manhã, tarde e noite.
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleGenerateFinalTrip}
-                            className="inline-flex items-center justify-center rounded-2xl bg-sky-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition duration-200 hover:bg-sky-300"
-                          >
-                            Gerar viagem final
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <div className="grid gap-5">
+                    {cities.map((city, index) => (
+                      <CityCard
+                        key={`${city.cidade}-${index}`}
+                        city={city}
+                        onClick={() => handleOpenCityDetails(city)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

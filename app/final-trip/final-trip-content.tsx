@@ -108,7 +108,7 @@ function PeriodCard({
   );
 }
 
-export default function FinalTripPage() {
+export default function FinalTripContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
