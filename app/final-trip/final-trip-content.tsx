@@ -160,6 +160,19 @@ export default function FinalTripContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailSuccess, setEmailSuccess] = useState("");
+  const [premiumTestEnabled, setPremiumTestEnabled] = useState(false);
+
+  useEffect(() => {
+    setPremiumTestEnabled(
+      process.env.NEXT_PUBLIC_ENABLE_PREMIUM_TEST === "true"
+    );
+  }, []);
+
   useEffect(() => {
     const fetchFinalTrip = async () => {
       if (!requestData) {
@@ -197,6 +210,47 @@ export default function FinalTripContent() {
     fetchFinalTrip();
   }, [requestData]);
 
+  const handleOpenEmailModal = () => {
+    setEmailModalOpen(true);
+    setEmailError("");
+    setEmailSuccess("");
+  };
+
+  const handleSendTripEmail = async () => {
+    if (!trip) return;
+
+    try {
+      setSendingEmail(true);
+      setEmailError("");
+      setEmailSuccess("");
+
+      const res = await fetch("/api/send-trip-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          trip,
+          premiumBypass: premiumTestEnabled,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Erro ao enviar o email.");
+      }
+
+      setEmailSuccess("Roteiro enviado com sucesso para o teu email.");
+      setEmail("");
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : "Erro inesperado.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fdfcf9_0%,#f7f7fb_55%,#f4f8fb_100%)] px-4 py-10 md:px-6 md:py-12">
       <div className="mx-auto max-w-6xl">
@@ -232,9 +286,7 @@ export default function FinalTripContent() {
 
         {loading && (
           <div className="rounded-[28px] border border-slate-200/80 bg-white/90 p-10 text-center shadow-[0_8px_30px_rgba(148,163,184,0.12)]">
-            <p className="text-sm text-slate-600">
-              A gerar a viagem final...
-            </p>
+            <p className="text-sm text-slate-600">A gerar a viagem final...</p>
           </div>
         )}
 
@@ -269,7 +321,11 @@ export default function FinalTripContent() {
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard label="Voo" value={`€${trip.vooEstimado}`} tone="sky" />
+                <StatCard
+                  label="Voo"
+                  value={`€${trip.vooEstimado}`}
+                  tone="sky"
+                />
                 <StatCard
                   label="Hospedagem"
                   value={`€${trip.hospedagemEstimada}`}
@@ -399,9 +455,10 @@ export default function FinalTripContent() {
               <div className="mt-6 grid gap-3 md:grid-cols-3">
                 <button
                   type="button"
+                  onClick={handleOpenEmailModal}
                   className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-100"
                 >
-                  Guardar esta viagem
+                  Enviar roteiro por email
                 </button>
 
                 <button
@@ -422,6 +479,103 @@ export default function FinalTripContent() {
           </div>
         )}
       </div>
+
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                  Premium
+                </div>
+
+                <h2 className="mt-4 text-2xl font-semibold text-slate-900">
+                  Enviar roteiro por email
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Esta funcionalidade faz parte do plano premium e permite
+                  receber o roteiro completo por email.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+              <p className="text-sm font-medium text-violet-900">
+                Plano premium
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Guarda e recebe o teu roteiro completo por email para o
+                consultares mais tarde.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <label
+                htmlFor="premium-email"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Email
+              </label>
+
+              <input
+                id="premium-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="teuemail@exemplo.com"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition duration-200 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+
+            {premiumTestEnabled && (
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                Modo de teste ativo: podes ultrapassar a paywall e testar o
+                envio real.
+              </div>
+            )}
+
+            {emailError && (
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {emailError}
+              </div>
+            )}
+
+            {emailSuccess && (
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {emailSuccess}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleSendTripEmail}
+                disabled={sendingEmail || !email.trim()}
+                className="inline-flex flex-1 items-center justify-center rounded-2xl bg-violet-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition duration-200 hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {sendingEmail ? "A enviar..." : "Desbloquear e enviar"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Agora não
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -122,6 +122,15 @@ export default function CityDetailsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const [premiumTestEnabled, setPremiumTestEnabled] = useState(false);
+
+  useEffect(() => {
+    setPremiumTestEnabled(
+      process.env.NEXT_PUBLIC_ENABLE_PREMIUM_TEST === "true"
+    );
+  }, []);
+
   useEffect(() => {
     const fetchDetails = async () => {
       if (!requestData) {
@@ -320,66 +329,135 @@ export default function CityDetailsContent() {
             </section>
 
             <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_8px_30px_rgba(148,163,184,0.12)] md:p-8">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    Visão geral do roteiro
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Uma primeira ideia do que fazer em cada dia, antes de gerar a
-                    versão final mais detalhada.
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Prévia do roteiro
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Uma visão simples dos dias, sem muitos detalhes. O roteiro
+                  completo fica na versão premium.
+                </p>
               </div>
 
               <div className="mt-5 space-y-3">
                 {details.roteiro.map((day) => (
                   <div
                     key={day.dia}
-                    className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-800">
-                        {day.dia}
-                      </div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Dia {day.dia}: {day.titulo}
-                      </p>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-800">
+                      {day.dia}
                     </div>
 
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
-                      {day.descricao}
+                    <p className="text-sm font-semibold text-slate-900">
+                      Dia {day.dia}: {day.titulo}
                     </p>
                   </div>
                 ))}
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_8px_30px_rgba(148,163,184,0.12)] md:p-8">
+            <section className="rounded-[28px] border border-violet-200 bg-violet-50/70 p-6 shadow-[0_8px_30px_rgba(148,163,184,0.12)] md:p-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="max-w-2xl">
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    Avançar para a versão final da viagem
+                  <div className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                    Premium
+                  </div>
+
+                  <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                    Desbloquear roteiro detalhado e mais
                   </h2>
+
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Se esta cidade fizer sentido para ti, no próximo passo vamos
-                    gerar uma versão final mais completa, com roteiro por manhã,
-                    tarde e noite.
+                    Gera um plano completo com manhã, tarde e noite, zonas
+                    recomendadas, dicas finais e opções para guardar ou enviar o
+                    roteiro por email.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleGenerateFinalTrip}
-                  className="inline-flex items-center justify-center rounded-2xl bg-sky-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition duration-200 hover:bg-sky-300"
+                  onClick={() => setPremiumModalOpen(true)}
+                  className="inline-flex items-center justify-center rounded-2xl bg-violet-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition duration-200 hover:bg-violet-300"
                 >
-                  Gerar viagem final
+                  Ver roteiro detalhado
                 </button>
               </div>
             </section>
           </div>
         )}
       </div>
+
+      {premiumModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                  Premium
+                </div>
+
+                <h2 className="mt-4 text-2xl font-semibold text-slate-900">
+                  Roteiro detalhado e mais
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Esta funcionalidade faz parte do plano premium. Ela desbloqueia
+                  o roteiro completo por manhã, tarde e noite, dicas finais e
+                  opções para guardar ou enviar por email.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+              <p className="text-sm font-medium text-violet-900">
+                Incluído no premium
+              </p>
+              <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+                <li>• Roteiro manhã, tarde e noite</li>
+                <li>• Dicas finais personalizadas</li>
+                <li>• Guardar viagem</li>
+                <li>• Enviar roteiro por email</li>
+              </ul>
+            </div>
+
+            {premiumTestEnabled && (
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                Modo de teste ativo: podes ultrapassar esta paywall.
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleGenerateFinalTrip}
+                disabled={!premiumTestEnabled}
+                className="inline-flex flex-1 items-center justify-center rounded-2xl bg-violet-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {premiumTestEnabled
+                  ? "Continuar em modo teste"
+                  : "Desbloquear premium"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Agora não
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
