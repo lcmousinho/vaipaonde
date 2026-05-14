@@ -29,7 +29,7 @@ type CityDetailsResponse = {
   roteiro: ItineraryDay[];
 };
 
-type CityDetailsRequest = {
+type CityDetailsRequestData = {
   origem: string;
   orcamento: number;
   tipo: string;
@@ -41,6 +41,7 @@ type CityDetailsRequest = {
   resumoCidade: string;
   melhorPara: string;
   custoEstimadoCidade: number;
+  diretoCidade: boolean;
 };
 
 function StatCard({
@@ -74,7 +75,7 @@ export default function CityDetailsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const requestData = useMemo<CityDetailsRequest | null>(() => {
+  const requestData = useMemo<CityDetailsRequestData | null>(() => {
     const origem = searchParams.get("origem");
     const orcamento = searchParams.get("orcamento");
     const tipo = searchParams.get("tipo");
@@ -86,6 +87,7 @@ export default function CityDetailsContent() {
     const resumoCidade = searchParams.get("resumoCidade");
     const melhorPara = searchParams.get("melhorPara");
     const custoEstimadoCidade = searchParams.get("custoEstimadoCidade");
+    const diretoCidade = searchParams.get("diretoCidade");
 
     if (
       !origem ||
@@ -95,10 +97,7 @@ export default function CityDetailsContent() {
       !mes ||
       !perfil ||
       !pais ||
-      !cidade ||
-      !resumoCidade ||
-      !melhorPara ||
-      !custoEstimadoCidade
+      !cidade
     ) {
       return null;
     }
@@ -112,9 +111,10 @@ export default function CityDetailsContent() {
       perfil,
       pais,
       cidade,
-      resumoCidade,
-      melhorPara,
-      custoEstimadoCidade: Number(custoEstimadoCidade),
+      resumoCidade: resumoCidade || "",
+      melhorPara: melhorPara || tipo,
+      custoEstimadoCidade: Number(custoEstimadoCidade || 0),
+      diretoCidade: diretoCidade === "true",
     };
   }, [searchParams]);
 
@@ -180,9 +180,13 @@ export default function CityDetailsContent() {
       perfil: requestData.perfil,
       pais: requestData.pais,
       cidade: requestData.cidade,
-      resumoCidade: requestData.resumoCidade,
-      melhorPara: requestData.melhorPara,
-      custoEstimadoCidade: String(requestData.custoEstimadoCidade),
+      resumoCidade:
+        requestData.resumoCidade || details?.resumo || requestData.cidade,
+      melhorPara:
+        requestData.melhorPara || details?.melhorPara || requestData.tipo,
+      custoEstimadoCidade: String(
+        requestData.custoEstimadoCidade || details?.custoTotal || 0
+      ),
     });
 
     router.push(`/final-trip?${params.toString()}`);

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import TripForm, { TripFormData } from "@/components/trip-form";
@@ -42,7 +43,24 @@ export default function Home() {
           </p>
         </header>
 
-        <TripForm onSearch={handleSearch} loading={loading} />
+        <div className="space-y-4">
+          <TripForm onSearch={handleSearch} loading={loading} />
+
+          <div className="rounded-[28px] border border-slate-200/80 bg-white/80 p-5 shadow-sm">
+            <p className="text-sm text-slate-600">
+              Já sabes mais ou menos para onde queres viajar?
+            </p>
+
+            <div className="mt-3">
+              <Link
+                href="/known-destination"
+                className="inline-flex items-center justify-center rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-medium text-violet-800 transition hover:bg-violet-100"
+              >
+                Já sei o destino
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

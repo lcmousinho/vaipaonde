@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CountryCard from "@/components/country-card";
 import CityCard from "@/components/city-card";
@@ -20,17 +20,22 @@ type CitySuggestion = {
   melhorPara: string;
 };
 
+type SearchFormWithPreset = TripFormData & {
+  paisPreselecionado?: string;
+};
+
 export default function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const searchForm = useMemo<TripFormData | null>(() => {
+  const searchForm = useMemo<SearchFormWithPreset | null>(() => {
     const origem = searchParams.get("origem");
     const orcamento = searchParams.get("orcamento");
     const tipo = searchParams.get("tipo");
     const dias = searchParams.get("dias");
     const mes = searchParams.get("mes");
     const perfil = searchParams.get("perfil");
+    const paisPreselecionado = searchParams.get("paisPreselecionado");
 
     if (!origem || !orcamento || !tipo || !dias || !mes || !perfil) {
       return null;
@@ -43,6 +48,7 @@ export default function ResultsContent() {
       dias: Number(dias),
       mes,
       perfil,
+      paisPreselecionado: paisPreselecionado || "",
     };
   }, [searchParams]);
 
@@ -54,45 +60,7 @@ export default function ResultsContent() {
   const [loadingCities, setLoadingCities] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchCountries = async () => {
-      if (!searchForm) {
-        setError("Faltam dados da pesquisa.");
-        setLoadingCountries(false);
-        return;
-      }
-
-      try {
-        setLoadingCountries(true);
-        setError("");
-        setCountries([]);
-        setCities([]);
-        setSelectedCountry(null);
-
-        const res = await fetch("/api/suggest-countries", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(searchForm),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Erro ao procurar países.");
-        }
-
-        setCountries(data.destinos || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro inesperado.");
-      } finally {
-        setLoadingCountries(false);
-      }
-    };
-
-    fetchCountries();
-  }, [searchForm]);
+  const autoSelectedCountryRef = useRef(false);
 
   const handleSelectCountry = async (pais: string) => {
     if (!searchForm) return;
@@ -109,7 +77,12 @@ export default function ResultsContent() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...searchForm,
+          origem: searchForm.origem,
+          orcamento: searchForm.orcamento,
+          tipo: searchForm.tipo,
+          dias: searchForm.dias,
+          mes: searchForm.mes,
+          perfil: searchForm.perfil,
           pais,
         }),
       });
@@ -127,6 +100,77 @@ export default function ResultsContent() {
       setLoadingCities(false);
     }
   };
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      if (!searchForm) {
+        setError("Faltam dados da pesquisa.");
+        setLoadingCountries(false);
+        return;
+      }
+
+      try {
+        setLoadingCountries(true);
+        setError("");
+        setCountries([]);
+        setCities([]);
+        setSelectedCountry(null);
+        autoSelectedCountryRef.current = false;
+
+        const res = await fetch("/api/suggest-countries", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            origem: searchForm.origem,
+            orcamento: searchForm.orcamento,
+            tipo: searchForm.tipo,
+            dias: searchForm.dias,
+            mes: searchForm.mes,
+            perfil: searchForm.perfil,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Erro ao procurar países.");
+        }
+
+        const destinos: CountrySuggestion[] = data.destinos || [];
+        setCountries(destinos);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erro inesperado.");
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+
+    fetchCountries();
+  }, [searchForm]);
+
+  useEffect(() => {
+    if (
+      loadingCountries ||
+      !searchForm?.paisPreselecionado ||
+      autoSelectedCountryRef.current ||
+      countries.length === 0
+    ) {
+      return;
+    }
+
+    const match = countries.find(
+      (item) =>
+        item.pais.trim().toLowerCase() ===
+        searchForm.paisPreselecionado?.trim().toLowerCase()
+    );
+
+    if (match) {
+      autoSelectedCountryRef.current = true;
+      handleSelectCountry(match.pais);
+    }
+  }, [countries, loadingCountries, searchForm]);
 
   const handleOpenCityDetails = (city: CitySuggestion) => {
     if (!searchForm || !selectedCountry) return;
