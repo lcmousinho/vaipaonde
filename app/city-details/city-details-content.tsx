@@ -1,7 +1,8 @@
 "use client";
 
+import { getUserPremiumStatus } from "@/lib/get-user-premium";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type StayArea = {
   nome: string;
@@ -73,6 +74,7 @@ function StatCard({
 
 export default function CityDetailsContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const requestData = useMemo<CityDetailsRequestData | null>(() => {
@@ -123,12 +125,31 @@ export default function CityDetailsContent() {
   const [error, setError] = useState("");
 
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
-  const [premiumTestEnabled, setPremiumTestEnabled] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [premiumLoading, setPremiumLoading] = useState(true);
+
+const canAccessPremium = loggedIn && isPremium;
 
   useEffect(() => {
-    setPremiumTestEnabled(
-      process.env.NEXT_PUBLIC_ENABLE_PREMIUM_TEST === "true"
-    );
+    const loadPremiumStatus = async () => {
+      try {
+        setPremiumLoading(true);
+
+        const status = await getUserPremiumStatus();
+
+        setLoggedIn(status.loggedIn);
+        setIsPremium(status.isPremium);
+      } catch (err) {
+        console.error("Erro ao carregar estado premium:", err);
+        setLoggedIn(false);
+        setIsPremium(false);
+      } finally {
+        setPremiumLoading(false);
+      }
+    };
+
+    loadPremiumStatus();
   }, []);
 
   useEffect(() => {
@@ -199,6 +220,25 @@ export default function CityDetailsContent() {
     });
 
     router.push(`/final-trip?${params.toString()}`);
+  };
+
+  const handleGoToLogin = () => {
+    const currentUrl = `${pathname}?${searchParams.toString()}`;
+    router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
+  };
+
+  const handlePremiumClick = () => {
+    if (canAccessPremium) {
+      handleGenerateFinalTrip();
+      return;
+    }
+
+    if (!loggedIn) {
+      handleGoToLogin();
+      return;
+    }
+
+    alert("Premium em breve.");
   };
 
   return (
@@ -402,9 +442,8 @@ export default function CityDetailsContent() {
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Esta funcionalidade faz parte do plano premium. Ela desbloqueia
-                  o roteiro completo por manhã, tarde e noite, dicas finais e
-                  opções para guardar ou enviar por email.
+                  Esta funcionalidade faz parte do plano premium. Entra ou cria
+                  uma conta para continuar.
                 </p>
               </div>
 
@@ -429,31 +468,47 @@ export default function CityDetailsContent() {
               </ul>
             </div>
 
-            {premiumTestEnabled && (
-              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
-                Modo de teste ativo: podes ultrapassar esta paywall.
+            {loggedIn && !isPremium &&  (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Estás logado, mas esta conta ainda não tem premium ativo.
               </div>
             )}
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={handleGenerateFinalTrip}
-                disabled={!premiumTestEnabled}
+                onClick={handlePremiumClick}
+                disabled={premiumLoading}
                 className="inline-flex flex-1 items-center justify-center rounded-2xl bg-violet-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {premiumTestEnabled
-                  ? "Continuar em modo teste"
-                  : "Desbloquear premium"}
+                {premiumLoading
+                  ? "A verificar..."
+                  : canAccessPremium
+                  ? "Continuar"
+                  : loggedIn
+                  ? "Virar premium"
+                  : "Entrar para desbloquear"}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setPremiumModalOpen(false)}
-                className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Agora não
-              </button>
+              {!loggedIn && (
+                <button
+                  type="button"
+                  onClick={handleGoToLogin}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Criar conta
+                </button>
+              )}
+
+              {loggedIn && !isPremium && (
+                <button
+                  type="button"
+                  onClick={() => alert("Pagamento premium em breve.")}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Saber mais
+                </button>
+              )}
             </div>
           </div>
         </div>
