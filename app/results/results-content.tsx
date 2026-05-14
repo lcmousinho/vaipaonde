@@ -1,5 +1,6 @@
 "use client";
 
+import { getUserPremiumStatus } from "@/lib/get-user-premium";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CountryCard from "@/components/country-card";
@@ -56,11 +57,39 @@ export default function ResultsContent() {
   const [cities, setCities] = useState<CitySuggestion[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
+  const [visibleCountries, setVisibleCountries] = useState(3);
+  const [visibleCities, setVisibleCities] = useState(3);
+
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
   const [error, setError] = useState("");
 
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [premiumLoading, setPremiumLoading] = useState(true);
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+
   const autoSelectedCountryRef = useRef(false);
+
+  useEffect(() => {
+    const loadPremiumStatus = async () => {
+      try {
+        setPremiumLoading(true);
+        const status = await getUserPremiumStatus();
+
+        setLoggedIn(status.loggedIn);
+        setIsPremium(status.isPremium);
+      } catch (err) {
+        console.error("Erro ao carregar estado premium:", err);
+        setLoggedIn(false);
+        setIsPremium(false);
+      } finally {
+        setPremiumLoading(false);
+      }
+    };
+
+    loadPremiumStatus();
+  }, []);
 
   const handleSelectCountry = async (pais: string) => {
     if (!searchForm) return;
@@ -70,6 +99,7 @@ export default function ResultsContent() {
       setError("");
       setSelectedCountry(pais);
       setCities([]);
+      setVisibleCities(3);
 
       const res = await fetch("/api/suggest-cities", {
         method: "POST",
@@ -115,6 +145,8 @@ export default function ResultsContent() {
         setCountries([]);
         setCities([]);
         setSelectedCountry(null);
+        setVisibleCountries(3);
+        setVisibleCities(3);
         autoSelectedCountryRef.current = false;
 
         const res = await fetch("/api/suggest-countries", {
@@ -192,6 +224,25 @@ export default function ResultsContent() {
     router.push(`/city-details?${params.toString()}`);
   };
 
+  const handleShowMoreCountries = () => {
+    if (isPremium) {
+      setVisibleCountries((previous) => previous + 3);
+      return;
+    }
+
+    setPremiumModalOpen(true);
+  };
+
+  const handleGoToLogin = () => {
+    const currentUrl = `/results?${searchParams.toString()}`;
+    router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
+  };
+
+  const handleGoToSignup = () => {
+    const currentUrl = `/results?${searchParams.toString()}`;
+    router.push(`/signup?next=${encodeURIComponent(currentUrl)}`);
+  };
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fdfcf9_0%,#f7f7fb_55%,#f4f8fb_100%)] px-4 py-10 md:px-6 md:py-12">
       <div className="mx-auto max-w-7xl">
@@ -259,14 +310,26 @@ export default function ResultsContent() {
                   </div>
 
                   <div className="space-y-4">
-                    {countries.map((country, index) => (
-                      <CountryCard
-                        key={`${country.pais}-${index}`}
-                        country={country}
-                        selected={selectedCountry === country.pais}
-                        onClick={() => handleSelectCountry(country.pais)}
-                      />
-                    ))}
+                    {countries
+                      .slice(0, visibleCountries)
+                      .map((country, index) => (
+                        <CountryCard
+                          key={`${country.pais}-${index}`}
+                          country={country}
+                          selected={selectedCountry === country.pais}
+                          onClick={() => handleSelectCountry(country.pais)}
+                        />
+                      ))}
+
+                    {visibleCountries < countries.length && (
+                      <button
+                        type="button"
+                        onClick={handleShowMoreCountries}
+                        className="w-full rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm font-medium text-violet-900 shadow-sm transition hover:bg-violet-100"
+                      >
+                        Ver mais destinos · Premium
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -309,13 +372,25 @@ export default function ResultsContent() {
 
                 {!loadingCities && cities.length > 0 && (
                   <div className="grid gap-5">
-                    {cities.map((city, index) => (
+                    {cities.slice(0, visibleCities).map((city, index) => (
                       <CityCard
                         key={`${city.cidade}-${index}`}
                         city={city}
                         onClick={() => handleOpenCityDetails(city)}
                       />
                     ))}
+
+                    {visibleCities < cities.length && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setVisibleCities((previous) => previous + 3)
+                        }
+                        className="w-full rounded-2xl border border-violet-200 bg-white/90 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-violet-50"
+                      >
+                        Ver mais cidades
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -323,6 +398,97 @@ export default function ResultsContent() {
           </section>
         )}
       </div>
+
+      {premiumModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                  Premium
+                </div>
+
+                <h2 className="mt-4 text-2xl font-semibold text-slate-900">
+                  Mais destinos disponíveis no Premium
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Para carregar mais sugestões de destinos, precisas de uma conta
+                  premium.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+              <p className="text-sm font-medium text-violet-900">
+                Com Premium podes:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+                <li>• Ver mais sugestões de destinos</li>
+                <li>• Desbloquear roteiros detalhados</li>
+                <li>• Guardar viagens</li>
+                <li>• Enviar roteiros por email</li>
+              </ul>
+            </div>
+
+            {loggedIn && !isPremium && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Estás logado, mas esta conta ainda não tem Premium ativo.
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              {!loggedIn && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleGoToLogin}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl bg-violet-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-violet-300"
+                  >
+                    Entrar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleGoToSignup}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Criar conta
+                  </button>
+                </>
+              )}
+
+              {loggedIn && !isPremium && (
+                <button
+                  type="button"
+                  onClick={() => alert("Pagamento premium em breve.")}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-violet-200 px-5 py-3 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-violet-300"
+                >
+                  Virar Premium
+                </button>
+              )}
+
+              {premiumLoading && (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex flex-1 cursor-not-allowed items-center justify-center rounded-2xl bg-slate-100 px-5 py-3 text-sm font-medium text-slate-500"
+                >
+                  A verificar...
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
